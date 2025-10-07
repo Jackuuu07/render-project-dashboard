@@ -28,7 +28,9 @@ const loginUser = async (req, res) => {
     {id: user._id, email: user.email },
     process.env.JWT_SECRET,
     {expiresIn: '365d'});
-
+    
+    console.log(token)
+    
     res.json({
         message:"Login Successful",
         token,
@@ -38,6 +40,7 @@ const loginUser = async (req, res) => {
         email: user.email
       }
     })
+    
 
   } catch (error) {
     console.error('❌ Error in loginUser:', error.message);
