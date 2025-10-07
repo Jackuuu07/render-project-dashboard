@@ -8,3 +8,5 @@ const router = express.Router();
 router.get('/getproject', protect, getProjects );
 
 router.post('/addproject', protect, addProject);
+
+module.exports = router;
