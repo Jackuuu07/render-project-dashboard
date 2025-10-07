@@ -5,6 +5,6 @@ const protect = require('../middlewares/protectRoute')
 
 const router = express.Router();
 
-router.get('/project', protect, getProjects );
+router.get('/getproject', protect, getProjects );
 
-router.post('/project', protect, addProject);
+router.post('/addproject', protect, addProject);
