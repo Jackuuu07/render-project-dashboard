@@ -1,7 +1,7 @@
 const express = require('express');
-const { registerUser } = require('../controllers/user.controllers'); // ✅ Import the function
+const { registerUser } = require('../controllers/SignUp.controllers'); // ✅ Import the function
 const router = express.Router();
-const { loginUser } = require('../controllers/user.login');
+const { loginUser } = require('../controllers/login.controllers');
 
 // ✅ Route definition with controller
 router.post('/register', registerUser);
