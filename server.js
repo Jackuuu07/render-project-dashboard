@@ -4,7 +4,6 @@ const dotenv = require('dotenv');
 const connectDB = require('./config/db');
 const userRoutes = require('./routes/user.routes');
 const errorHandler = require('./middlewares/errorhandler');
-const LoginUser = require('./controllers/user.login');
 dotenv.config();
 const app = express();
 
