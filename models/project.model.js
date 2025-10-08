@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const Counter = require('./counter.models');
+const Counter = require('./counter.model');
 
 const projectSchema = new mongoose.Schema({
   projectId: {
