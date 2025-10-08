@@ -25,7 +25,7 @@ connectDB();
 
 // Routes
 app.use('/api/users', userRoutes);
-app.use('/api/users', userProject);
+app.use('/api/project', userProject);
 
 
 // Error Handling Middleware
