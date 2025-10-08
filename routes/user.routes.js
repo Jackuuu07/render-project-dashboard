@@ -5,9 +5,9 @@ const { loginUser } = require('../controllers/login.controllers');
 const protect = require('../middlewares/protectRoute')
 
 // ✅ Route definition with controller
-router.post('/register',protect,  registerUser);
+router.post('/register',  registerUser);
 
 // Login Route
-router.post('/login', protect, loginUser);
+router.post('/login', loginUser);
 
 module.exports = router;
