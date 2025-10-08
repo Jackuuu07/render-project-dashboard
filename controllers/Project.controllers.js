@@ -5,10 +5,20 @@ const getProjects = async (req, res) => {
   try {
     const userId = req.user.id; // Comes from JWT middleware
     const projects = await Project.find({ userId }).sort({ createdAt: -1 });
-    res.json(projects);
+
+    res.status(200).json({
+      success: true,
+      message: 'data fetch successfully',
+      data: projects
+    })
+
   } catch (error) {
+    
     console.error('❌ Error fetching projects:', error.message);
-    res.status(500).json({ message: 'Server Error' });
+    
+    res.status(500).json({ 
+      success: false,
+      message: 'Server Error' });
   }
 };
 
@@ -20,7 +30,9 @@ const addProject = async (req, res) => {
     const { projectName, description, date } = req.body;
 
     if (!projectName || !description || !date) {
-      return res.status(400).json({ message: 'All fields are required' });
+      return res.status(400).json({ 
+        success : false,
+        message: 'All fields are required' });
     }
 
     const newProject = new Project({
