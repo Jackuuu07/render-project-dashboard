@@ -22,17 +22,21 @@ const getProjects = async (req, res) => {
 };
 
 // ----------- for adding projects ----
+
+
 const addProject = async (req, res) => {
   try {
-    const userId = Number(req.user.id); // ✅ ensure numeric userId
-    const { projectName, description, date } = req.body;
+    const { userId: bodyUserId, projectName, description, date: bodyDate } = req.body;
 
-    if (!projectName || !description || !date) {
+    if (!bodyUserId || !projectName || !description || !bodyDate) {
       return res.status(400).json({ 
         success: false,
         message: 'All fields are required' 
       });
     }
+
+    const userId = Number(bodyUserId);       // convert to numeric
+    const date = new Date(bodyDate);         // convert to Date object
 
     const newProject = new Project({
       userId,
@@ -43,19 +47,18 @@ const addProject = async (req, res) => {
 
     await newProject.save();
 
-    // ✅ Include the auto-generated projectId in the JSON response
-    res.status(201).json({ 
+    res.status(201).json({
       success: true,
-      message: 'Project added successfully', 
-      projectId: newProject.projectId,  // <- key line
-      project: newProject 
+      message: 'Project added successfully',
+      projectId: newProject.projectId,
+      project: newProject
     });
 
   } catch (error) {
-    console.error('❌ Error adding project:', error.message);
-    res.status(500).json({ 
+    console.error('❌ Error adding project:', error); // show full error
+    res.status(500).json({
       success: false,
-      message: 'Server Error' 
+      message: 'Server Error'
     });
   }
 };
