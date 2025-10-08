@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const counterSchema = new mongoose.Schema({
-  _id: { type: String, required: true },
+  _id: { type: String, required: true }, // counter name (e.g., "projectId" or "userId")
   seq: { type: Number, default: 0 }
 });
 

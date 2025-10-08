@@ -24,25 +24,25 @@ const getProjects = async (req, res) => {
 // ----------- for adding projects ----
 
 
+
 const addProject = async (req, res) => {
   try {
-    const { userId: bodyUserId, projectName, description, date: bodyDate } = req.body;
+    const { projectName, description, date: bodyDate } = req.body;
 
-    if (!bodyUserId || !projectName || !description || !bodyDate) {
+    if (!projectName || !description || !bodyDate) {
       return res.status(400).json({ 
         success: false,
         message: 'All fields are required' 
       });
     }
 
-    const userId = Number(bodyUserId);       // convert to numeric
-    const date = new Date(bodyDate);         // convert to Date object
+    const date = new Date(bodyDate);
 
     const newProject = new Project({
-      userId,
       projectName,
       description,
       date
+      // userId will be auto-assigned
     });
 
     await newProject.save();
@@ -51,11 +51,12 @@ const addProject = async (req, res) => {
       success: true,
       message: 'Project added successfully',
       projectId: newProject.projectId,
+      userId: newProject.userId, // ✅ auto-incremented
       project: newProject
     });
 
   } catch (error) {
-    console.error('❌ Error adding project:', error); // show full error
+    console.error('❌ Error adding project:', error);
     res.status(500).json({
       success: false,
       message: 'Server Error'
@@ -63,10 +64,8 @@ const addProject = async (req, res) => {
   }
 };
 
-module.exports = { getProjects, addProject };
 
-
-
+module.exports = { addProject, getProjects };
 
 
 
