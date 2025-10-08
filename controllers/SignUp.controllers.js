@@ -4,8 +4,8 @@ const bcrypt = require('bcryptjs');
 const registerUser = async (req, res) => {
   try {
 
-    consol.log("INcoming body is : ", req.body);
-    
+    console.log("Incoming body is : ", req.body);
+  
     const { name, email, password } = req.body;
 
     // ✅ Validation
