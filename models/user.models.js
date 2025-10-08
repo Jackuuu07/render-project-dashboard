@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const counter = require('./counter.model')
 
 const userSchema = new mongoose.Schema({
   userId:{
