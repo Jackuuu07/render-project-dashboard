@@ -307,6 +307,7 @@ const createCard = async (req, res) => {
 };
 
 
+// ------------------- update card status -----------------
 const updateCardStatus = async (req, res) => {
   try {
     console.log("\n➡️ [CONTROLLER] updateCardStatus called");
@@ -538,7 +539,7 @@ const dislikeProject = async (req, res) => {
   }
 };
 
-// -------------------- userassineg project status ----------------------
+// -------------------- userassing project status ----------------------
 
 // GET: /api/project/:projectId/status
 const getProjectStatus = async (req, res) => {
@@ -592,6 +593,123 @@ const getProjectStatus = async (req, res) => {
 
 
 
-module.exports = { addProject, updateProject  , getProjects, getProjectStatus, deleteProject, createCard, updateCardStatus, getProjectCards,
-                   addComment, addReply, likeProject, dislikeProject };
 
+
+
+
+// ---------------- Add Comment to a Card ----------------
+
+
+
+// controllers/commentCard.controller.js
+
+
+const addCommentToCard = async (req, res) => {
+  try {
+    console.log("➡️ [CONTROLLER] addCommentToCard called");
+
+    const { projectId, cardId } = req.params;
+    const { commentText } = req.body;
+    const userId = req.user.id;
+
+    if (!projectId || !cardId || !commentText) {
+      return res.status(400).json({ 
+        status: false, 
+        message: "projectId, cardId, and commentText are required" 
+      });
+    }
+
+    const card = await Card.findOne({ projectId: Number(projectId), cardId: Number(cardId) });
+    if (!card) {
+      return res.status(404).json({ status: false, message: "Card not found for this project" });
+    }
+
+    const newComment = new Comment({
+      projectId: Number(projectId),
+      cardId: Number(cardId),
+      userId: Number(userId),
+      commentText,
+    });
+
+    await newComment.save();
+
+    const user = await User.findOne({ userId: Number(userId) });
+
+    return res.status(201).json({
+      status: true,
+      message: "Comment added successfully",
+      data: {
+        commentId: newComment.commentId, // <-- Now it's numeric and incremental
+        projectId: newComment.projectId,
+        cardId: newComment.cardId,
+        userId: newComment.userId,
+        username: user ? user.name : "Unknown",
+        commentText: newComment.commentText,
+        createdAt: newComment.createdAt,
+      },
+    });
+  } catch (error) {
+    console.error("❌ addCommentToCard Error:", error);
+    return res.status(500).json({ status: false, message: "Server Error", error: error.message });
+  }
+};
+
+
+
+
+// ------------------------- listing all comments to the card --------------
+// controllers/commentCard.controller.js (same file)
+const getCommentsByCard = async (req, res) => {
+  try {
+    console.log("➡️ [CONTROLLER] getCommentsByCard called");
+
+    const { projectId, cardId } = req.params;
+
+    if (!projectId || !cardId) {
+      return res.status(400).json({ 
+        status: false, 
+        message: "projectId and cardId are required" 
+      });
+    }
+
+    const comments = await Comment.find({ 
+      projectId: Number(projectId),
+      cardId: Number(cardId)
+    }).sort({ createdAt: -1 });
+
+    if (!comments || comments.length === 0) {
+      return res.status(404).json({ status: false, message: "No comments found for this card" });
+    }
+
+    // ✅ Optionally populate user info
+    const userIds = comments.map(c => c.userId);
+    const users = await User.find({ userId: { $in: userIds } }, "userId name");
+
+    const commentList = comments.map(comment => {
+      const user = users.find(u => u.userId === comment.userId);
+      return {
+        commentId: comment._id,
+        cardId: comment.cardId,
+        userId: comment.userId,
+        username: user ? user.name : "Unknown",
+        commentText: comment.commentText,
+        createdAt: comment.createdAt,
+      };
+    });
+
+    return res.status(200).json({
+      status: true,
+      message: `Found ${commentList.length} comments for this card`,
+      comments: commentList,
+    });
+  } catch (error) {
+    console.error("❌ getCommentsByCard Error:", error);
+    return res.status(500).json({ status: false, message: "Server Error", error: error.message });
+  }
+};
+
+
+
+
+module.exports = { addProject, updateProject  , getProjects, getProjectStatus, deleteProject, createCard, updateCardStatus, getProjectCards,
+                   addComment, addReply, likeProject, dislikeProject, addCommentToCard, getCommentsByCard };

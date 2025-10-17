@@ -6,6 +6,7 @@ const {removeAssignedUsers} = require('../controllers/removeassignedProjects')
 const { createCard, updateCardStatus } = require('../controllers/Project.controllers');
 const { addComment, addReply, likeProject, dislikeProject } = require("../controllers/Project.controllers");
 const router = express.Router();
+const { addCommentToCard, getCommentsByCard } = require("../controllers/Project.controllers");
 
 router.get('/getproject', protect, getProjects );
 
@@ -97,5 +98,28 @@ router.post("/comment", protect, addComment);
 router.post("/reply", protect, addReply);
 router.post("/like", protect, likeProject);
 router.post("/dislike", protect, dislikeProject);
+
+
+// -------------------------- comment / listComment into card ----------------
+
+// ======================= ROUTES =======================
+
+// 🟢 POST: Add Comment to a Card
+router.post("/:projectId/card/:cardId/comment", protect, (req, res, next) => {
+  console.log("📩 [ROUTER] POST /project/:projectId/card/:cardId/comment called");
+  console.log("➡️ Params:", req.params);
+  console.log("➡️ Body:", req.body);
+  console.log("➡️ User:", req.user);
+  next(); // continue to controller
+}, addCommentToCard);
+
+// 🟣 GET: List All Comments for a Card
+router.get("/:projectId/card/:cardId/comments", protect, (req, res, next) => {
+  console.log("📜 [ROUTER] GET /project/:projectId/card/:cardId/comments called");
+  console.log("➡️ Params:", req.params);
+  console.log("➡️ User:", req.user);
+  next(); // continue to controller
+}, getCommentsByCard);
+
 
 module.exports = router;    
