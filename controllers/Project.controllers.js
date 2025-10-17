@@ -604,6 +604,15 @@ const getProjectStatus = async (req, res) => {
 // controllers/commentCard.controller.js
 
 
+const getNextCommentId = async () => {
+  const counter = await Counter.findOneAndUpdate(
+    { _id: "commentId" },
+    { $inc: { seq: 1 } },
+    { new: true, upsert: true }
+  );
+  return counter.seq;
+};
+
 const addCommentToCard = async (req, res) => {
   try {
     console.log("➡️ [CONTROLLER] addCommentToCard called");
@@ -613,18 +622,17 @@ const addCommentToCard = async (req, res) => {
     const userId = req.user.id;
 
     if (!projectId || !cardId || !commentText) {
-      return res.status(400).json({ 
-        status: false, 
-        message: "projectId, cardId, and commentText are required" 
-      });
+      return res.status(400).json({ status: false, message: "projectId, cardId, and commentText are required" });
     }
 
     const card = await Card.findOne({ projectId: Number(projectId), cardId: Number(cardId) });
-    if (!card) {
-      return res.status(404).json({ status: false, message: "Card not found for this project" });
-    }
+    if (!card) return res.status(404).json({ status: false, message: "Card not found for this project" });
+
+    const nextCommentId = await getNextCommentId();
+    console.log("📝 Auto-incremented commentId:", nextCommentId);
 
     const newComment = new Comment({
+      commentId: nextCommentId,
       projectId: Number(projectId),
       cardId: Number(cardId),
       userId: Number(userId),
@@ -635,11 +643,19 @@ const addCommentToCard = async (req, res) => {
 
     const user = await User.findOne({ userId: Number(userId) });
 
+    console.log("✅ New comment created:", {
+      commentId: newComment.commentId,
+      projectId: newComment.projectId,
+      cardId: newComment.cardId,
+      userId: newComment.userId,
+      username: user ? user.name : "Unknown",
+    });
+
     return res.status(201).json({
       status: true,
       message: "Comment added successfully",
       data: {
-        commentId: newComment.commentId, // <-- Now it's numeric and incremental
+        commentId: newComment.commentId,
         projectId: newComment.projectId,
         cardId: newComment.cardId,
         userId: newComment.userId,
@@ -657,6 +673,8 @@ const addCommentToCard = async (req, res) => {
 
 
 
+
+
 // ------------------------- listing all comments to the card --------------
 // controllers/commentCard.controller.js (same file)
 const getCommentsByCard = async (req, res) => {
@@ -664,6 +682,7 @@ const getCommentsByCard = async (req, res) => {
     console.log("➡️ [CONTROLLER] getCommentsByCard called");
 
     const { projectId, cardId } = req.params;
+    console.log("📌 Params:", { projectId, cardId });
 
     if (!projectId || !cardId) {
       return res.status(400).json({ 
@@ -672,31 +691,36 @@ const getCommentsByCard = async (req, res) => {
       });
     }
 
+    // ✅ Fetch comments sorted by creation date descending
     const comments = await Comment.find({ 
       projectId: Number(projectId),
       cardId: Number(cardId)
-    }).sort({ createdAt: -1 });
+    }).sort({ createdAt: -1 }).lean(); // lean() gives plain JS objects
 
     if (!comments || comments.length === 0) {
       return res.status(404).json({ status: false, message: "No comments found for this card" });
     }
 
-    // ✅ Optionally populate user info
+    // ✅ Fetch user info for all comments
     const userIds = comments.map(c => c.userId);
-    const users = await User.find({ userId: { $in: userIds } }, "userId name");
+    const users = await User.find({ userId: { $in: userIds } }, "userId name").lean();
 
+    // ✅ Prepare comment list with numeric commentId
     const commentList = comments.map(comment => {
       const user = users.find(u => u.userId === comment.userId);
       return {
-        commentId: comment._id,
-        cardId: comment.cardId,
-        userId: comment.userId,
+        commentId: Number(comment.commentId), // ensure numeric
+        cardId: Number(comment.cardId),
+        userId: Number(comment.userId),
         username: user ? user.name : "Unknown",
         commentText: comment.commentText,
+        likes: comment.likes || 0,
+        dislikes: comment.dislikes || 0,
         createdAt: comment.createdAt,
       };
     });
 
+    console.log(`📦 Found ${commentList.length} comments`);
     return res.status(200).json({
       status: true,
       message: `Found ${commentList.length} comments for this card`,
@@ -709,7 +733,112 @@ const getCommentsByCard = async (req, res) => {
 };
 
 
+// ----------------------------------------------------------------------------------------
+// 🟢 Like a Comment
+// ----------------------------------------------------------------------------------------
+
+const likeComment = async (req, res) => {
+  try {
+    const { commentId } = req.params;
+    const userId = req.user.id;
+
+    console.log("👍 [CONTROLLER] likeComment called:", commentId, "by user:", userId);
+
+    const comment = await Comment.findOne({ commentId: Number(commentId) });
+    if (!comment) {
+      return res.status(404).json({ status: false, message: "Comment not found" });
+    }
+
+    // If already liked → remove like
+    if (comment.likedBy.includes(userId)) {
+      comment.likes -= 1;
+      comment.likedBy = comment.likedBy.filter(id => id !== userId);
+      await comment.save();
+      return res.status(200).json({ status: true, message: "Like removed", likes: comment.likes });
+    }
+
+    // If disliked earlier → remove that dislike
+    if (comment.dislikedBy.includes(userId)) {
+      comment.dislikes -= 1;
+      comment.dislikedBy = comment.dislikedBy.filter(id => id !== userId);
+    }
+
+    // Add like
+    comment.likes += 1;
+    comment.likedBy.push(userId);
+    await comment.save();
+
+    return res.status(200).json({
+      status: true,
+      message: "Comment liked successfully",
+      likes: comment.likes,
+      dislikes: comment.dislikes,
+    });
+  } catch (error) {
+    console.error("❌ likeComment Error:", error);
+    return res.status(500).json({ status: false, message: "Server Error", error: error.message });
+  }
+};
+
+
+
+// --------------------------------------------------------------------------------------
+// 🔴 Dislike a Comment
+// -----------------------------------------------------------------------
+
+const dislikeComment = async (req, res) => {
+  try {
+    const { commentId } = req.params;
+    const userId = req.user.id;
+
+    console.log("👎 [CONTROLLER] dislikeComment called:", commentId, "by user:", userId);
+
+    const comment = await Comment.findOne({ commentId: Number(commentId) });
+    if (!comment) {
+      return res.status(404).json({ status: false, message: "Comment not found" });
+    }
+
+    // If already disliked → remove dislike
+    if (comment.dislikedBy.includes(userId)) {
+      comment.dislikes -= 1;
+      comment.dislikedBy = comment.dislikedBy.filter(id => id !== userId);
+      await comment.save();
+      return res.status(200).json({ status: true, message: "Dislike removed", dislikes: comment.dislikes });
+    }
+
+    // If liked earlier → remove that like
+    if (comment.likedBy.includes(userId)) {
+      comment.likes -= 1;
+      comment.likedBy = comment.likedBy.filter(id => id !== userId);
+    }
+
+    // Add dislike
+    comment.dislikes += 1;
+    comment.dislikedBy.push(userId);
+    await comment.save();
+
+    return res.status(200).json({
+      status: true,
+      message: "Comment disliked successfully",
+      likes: comment.likes,
+      dislikes: comment.dislikes,
+    });
+  } catch (error) {
+    console.error("❌ dislikeComment Error:", error);
+    return res.status(500).json({ status: false, message: "Server Error", error: error.message });
+  }
+};
+
+module.exports = {
+  
+  // (and your other exports like getCommentsByCard)
+};
+
+
+
+
+
 
 
 module.exports = { addProject, updateProject  , getProjects, getProjectStatus, deleteProject, createCard, updateCardStatus, getProjectCards,
-                   addComment, addReply, likeProject, dislikeProject, addCommentToCard, getCommentsByCard };
+                   addComment, addReply, likeProject, dislikeProject, addCommentToCard, getCommentsByCard,addCommentToCard,likeComment, dislikeComment };

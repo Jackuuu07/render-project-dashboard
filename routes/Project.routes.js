@@ -6,7 +6,7 @@ const {removeAssignedUsers} = require('../controllers/removeassignedProjects')
 const { createCard, updateCardStatus } = require('../controllers/Project.controllers');
 const { addComment, addReply, likeProject, dislikeProject } = require("../controllers/Project.controllers");
 const router = express.Router();
-const { addCommentToCard, getCommentsByCard } = require("../controllers/Project.controllers");
+const { addCommentToCard, getCommentsByCard, likeComment, dislikeComment } = require("../controllers/Project.controllers");
 
 router.get('/getproject', protect, getProjects );
 
@@ -121,5 +121,17 @@ router.get("/:projectId/card/:cardId/comments", protect, (req, res, next) => {
   next(); // continue to controller
 }, getCommentsByCard);
 
+
+// 👍 Like a Comment
+router.post("/comment/:commentId/like", protect, (req, res, next) => {
+  console.log("👍 [ROUTER] Like Comment:", req.params);
+  next();
+}, likeComment);
+
+// 👎 Dislike a Comment
+router.post("/comment/:commentId/dislike", protect, (req, res, next) => {
+  console.log("👎 [ROUTER] Dislike Comment:", req.params);
+  next();
+}, dislikeComment);
 
 module.exports = router;    
