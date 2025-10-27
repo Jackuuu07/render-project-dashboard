@@ -3,8 +3,8 @@ const Counter = require('../models/counter.model');
 const Card = require('../models/CardCreation.mdoel')
 const Comment = require("../models/commentProject.model");
 const Reply = require("../models/replyProject.model");
-const Like = require("../models/likeProject.model");
-const Dislike = require("../models/dislikeProject.model");
+const Like = require("../models/likeComment.model");
+const Dislike = require("../models/dislikeComment.model");
 const User = require('../models/user.models')
 //  ------ for listing projects ----
 const getProjects = async (req, res) => {
@@ -539,7 +539,7 @@ const dislikeProject = async (req, res) => {
   }
 };
 
-// -------------------- userassing project status ----------------------
+// -------------------- user assing project status ----------------------
 
 // GET: /api/project/:projectId/status
 const getProjectStatus = async (req, res) => {
@@ -739,34 +739,77 @@ const getCommentsByCard = async (req, res) => {
 
 const likeComment = async (req, res) => {
   try {
-    const { commentId } = req.params;
+    const { projectId, cardId, commentId } = req.params;
     const userId = req.user.id;
 
-    console.log("👍 [CONTROLLER] likeComment called:", commentId, "by user:", userId);
+    console.log("\n🕒 [INFO]", new Date().toLocaleString());
+    console.log("👍 [CONTROLLER] likeComment called");
+    console.log("📩 Params received:", { projectId, cardId, commentId });
+    console.log("🙋 User ID:", userId);
 
-    const comment = await Comment.findOne({ commentId: Number(commentId) });
+    // Validate input
+    if (!projectId || !cardId || !commentId) {
+      console.warn("⚠️ Missing required params:", { projectId, cardId, commentId });
+      return res.status(400).json({
+        status: false,
+        message: "projectId, cardId, and commentId are required"
+      });
+    }
+
+    // Find the comment under the given project and card
+    console.log("🔍 Searching for comment in database...");
+    const comment = await Comment.findOne({
+      projectId: Number(projectId),
+      cardId: Number(cardId),
+      commentId: Number(commentId)
+    });
+
     if (!comment) {
+      console.warn("❌ Comment not found for given IDs:", { projectId, cardId, commentId });
       return res.status(404).json({ status: false, message: "Comment not found" });
     }
 
-    // If already liked → remove like
+    console.log("✅ Comment found:", {
+      commentId: comment.commentId,
+      likes: comment.likes,
+      dislikes: comment.dislikes,
+      likedByCount: comment.likedBy.length,
+      dislikedByCount: comment.dislikedBy.length,
+    });
+
+    // Check if the user already liked it
     if (comment.likedBy.includes(userId)) {
+      console.log("🔁 User already liked this comment — removing like...");
       comment.likes -= 1;
       comment.likedBy = comment.likedBy.filter(id => id !== userId);
       await comment.save();
-      return res.status(200).json({ status: true, message: "Like removed", likes: comment.likes });
+
+      console.log("✅ Like removed successfully. Updated likes:", comment.likes);
+      return res.status(200).json({
+        status: true,
+        message: "Like removed",
+        likes: comment.likes
+      });
     }
 
-    // If disliked earlier → remove that dislike
+    // If the user had disliked it earlier
     if (comment.dislikedBy.includes(userId)) {
+      console.log("↩️ User previously disliked — removing dislike before adding like...");
       comment.dislikes -= 1;
       comment.dislikedBy = comment.dislikedBy.filter(id => id !== userId);
     }
 
-    // Add like
+    // Add new like
+    console.log("➕ Adding new like...");
     comment.likes += 1;
     comment.likedBy.push(userId);
     await comment.save();
+
+    console.log("✅ Like added successfully:", {
+      likes: comment.likes,
+      dislikes: comment.dislikes,
+      likedBy: comment.likedBy,
+    });
 
     return res.status(200).json({
       status: true,
@@ -775,10 +818,16 @@ const likeComment = async (req, res) => {
       dislikes: comment.dislikes,
     });
   } catch (error) {
-    console.error("❌ likeComment Error:", error);
-    return res.status(500).json({ status: false, message: "Server Error", error: error.message });
+    console.error("🔥 [ERROR] likeComment Exception:", error);
+    return res.status(500).json({
+      status: false,
+      message: "Server Error",
+      error: error.message
+    });
   }
 };
+
+
 
 
 
@@ -788,34 +837,78 @@ const likeComment = async (req, res) => {
 
 const dislikeComment = async (req, res) => {
   try {
-    const { commentId } = req.params;
+    const { projectId, cardId, commentId } = req.params;
     const userId = req.user.id;
 
-    console.log("👎 [CONTROLLER] dislikeComment called:", commentId, "by user:", userId);
+    console.log("\n🕒 [INFO]", new Date().toLocaleString());
+    console.log("👎 [CONTROLLER] dislikeComment called");
+    console.log("📩 Params received:", { projectId, cardId, commentId });
+    console.log("🙋 User ID:", userId);
 
-    const comment = await Comment.findOne({ commentId: Number(commentId) });
+    // ✅ Validate input
+    if (!projectId || !cardId || !commentId) {
+      console.warn("⚠️ Missing required params:", { projectId, cardId, commentId });
+      return res.status(400).json({
+        status: false,
+        message: "projectId, cardId, and commentId are required"
+      });
+    }
+
+    // ✅ Find the comment in the DB
+    console.log("🔍 Searching for comment in database...");
+    const comment = await Comment.findOne({
+      projectId: Number(projectId),
+      cardId: Number(cardId),
+      commentId: Number(commentId)
+    });
+
     if (!comment) {
+      console.warn("❌ Comment not found for given IDs:", { projectId, cardId, commentId });
       return res.status(404).json({ status: false, message: "Comment not found" });
     }
 
-    // If already disliked → remove dislike
+    console.log("✅ Comment found:", {
+      commentId: comment.commentId,
+      likes: comment.likes,
+      dislikes: comment.dislikes,
+      likedByCount: comment.likedBy.length,
+      dislikedByCount: comment.dislikedBy.length,
+    });
+
+    // ✅ If already disliked → remove dislike
     if (comment.dislikedBy.includes(userId)) {
+      console.log("🔁 User already disliked — removing dislike...");
       comment.dislikes -= 1;
       comment.dislikedBy = comment.dislikedBy.filter(id => id !== userId);
       await comment.save();
-      return res.status(200).json({ status: true, message: "Dislike removed", dislikes: comment.dislikes });
+
+      console.log("✅ Dislike removed successfully. Updated dislikes:", comment.dislikes);
+      return res.status(200).json({
+        status: true,
+        message: "Dislike removed",
+        dislikes: comment.dislikes
+      });
     }
 
-    // If liked earlier → remove that like
+    // ✅ If liked earlier → remove that like
     if (comment.likedBy.includes(userId)) {
+      console.log("↩️ User previously liked — removing like before adding dislike...");
       comment.likes -= 1;
       comment.likedBy = comment.likedBy.filter(id => id !== userId);
     }
 
-    // Add dislike
+    // ✅ Add new dislike
+    console.log("➕ Adding new dislike...");
     comment.dislikes += 1;
     comment.dislikedBy.push(userId);
     await comment.save();
+
+    console.log("✅ Dislike added successfully:", {
+      likes: comment.likes,
+      dislikes: comment.dislikes,
+      likedBy: comment.likedBy,
+      dislikedBy: comment.dislikedBy,
+    });
 
     return res.status(200).json({
       status: true,
@@ -823,11 +916,17 @@ const dislikeComment = async (req, res) => {
       likes: comment.likes,
       dislikes: comment.dislikes,
     });
+
   } catch (error) {
-    console.error("❌ dislikeComment Error:", error);
-    return res.status(500).json({ status: false, message: "Server Error", error: error.message });
+    console.error("🔥 [ERROR] dislikeComment Exception:", error);
+    return res.status(500).json({
+      status: false,
+      message: "Server Error",
+      error: error.message
+    });
   }
 };
+
 
 module.exports = {
   

@@ -91,6 +91,8 @@ router.put('/:projectId/cards/status', protect, updateCardStatus);
 
 router.get('/:projectId/cards', getProjectCards);
 
+
+
 // -------------- comment / reply / liked / disliked --------------
 
 
@@ -104,7 +106,7 @@ router.post("/dislike", protect, dislikeProject);
 
 // ======================= ROUTES =======================
 
-// 🟢 POST: Add Comment to a Card
+// -------------------------  🟢 POST: Add Comment to a Card
 router.post("/:projectId/card/:cardId/comment", protect, (req, res, next) => {
   console.log("📩 [ROUTER] POST /project/:projectId/card/:cardId/comment called");
   console.log("➡️ Params:", req.params);
@@ -113,7 +115,7 @@ router.post("/:projectId/card/:cardId/comment", protect, (req, res, next) => {
   next(); // continue to controller
 }, addCommentToCard);
 
-// 🟣 GET: List All Comments for a Card
+// --------------------------  🟣 GET: List All Comments for a Card
 router.get("/:projectId/card/:cardId/comments", protect, (req, res, next) => {
   console.log("📜 [ROUTER] GET /project/:projectId/card/:cardId/comments called");
   console.log("➡️ Params:", req.params);
@@ -122,14 +124,14 @@ router.get("/:projectId/card/:cardId/comments", protect, (req, res, next) => {
 }, getCommentsByCard);
 
 
-// 👍 Like a Comment
-router.post("/comment/:commentId/like", protect, (req, res, next) => {
+// ---------------------------------- 👍 Like a Comment
+router.post("/:projectId/card/:cardId/comment/:commentId/like", protect, (req, res, next) => {
   console.log("👍 [ROUTER] Like Comment:", req.params);
   next();
 }, likeComment);
 
-// 👎 Dislike a Comment
-router.post("/comment/:commentId/dislike", protect, (req, res, next) => {
+// ----------------------------------------- 👎 Dislike a Comment
+router.post("/:projectId/card/:cardId/comment/:commentId/dislike", protect, (req, res, next) => {
   console.log("👎 [ROUTER] Dislike Comment:", req.params);
   next();
 }, dislikeComment);
