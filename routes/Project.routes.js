@@ -1,6 +1,6 @@
 const express = require('express');
 const { getProjects, addProject, deleteProject, getProjectCards, updateProject, getProjectStatus} = require('../controllers/Project.controllers');
-const {assignUsersToProject} = require('../controllers/assignedProjects')
+const {assignUsersToProject, getAssignedProjects} = require('../controllers/assignedProjects')
 const protect = require('../middlewares/protectRoute')
 const {removeAssignedUsers} = require('../controllers/removeassignedProjects')
 const { createCard, updateCardStatus } = require('../controllers/Project.controllers');
@@ -25,8 +25,6 @@ router.post('/addproject', protect, (req, res, next) => {
     addProject(req, res, next);
 });
 
-router.post('/:projectId/assignedproject', protect, assignUsersToProject);
-
 // ---------------------- update project ---------------------
 
 router.put('/:projectId/updateproject', protect, updateProject);
@@ -35,8 +33,12 @@ router.put('/:projectId/updateproject', protect, updateProject);
 
 router.get('/:projectId/status', protect, getProjectStatus);
 
-// -------------------- remove assigned -----------------
 
+// ---------------------- assigned Project -----------------------
+
+router.post('/:projectId/assignedproject', protect, assignUsersToProject);
+
+// -------------------- remove assigned -----------------
 
 router.post('/:projectId/removeassigned', protect, async (req, res, next) => {
   console.log("➡️ [ROUTE] /:projectId/removeassigned called");
@@ -51,6 +53,10 @@ router.post('/:projectId/removeassigned', protect, async (req, res, next) => {
     res.status(500).json({ status: false, message: 'Server Error', error: err.message });
   }
 });
+
+// ----------------- specific user assined project list --------------
+
+router.get('/assignedproject/:userId', protect, getAssignedProjects);
 
 
 

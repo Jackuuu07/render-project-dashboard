@@ -613,6 +613,8 @@ const getNextCommentId = async () => {
   return counter.seq;
 };
 
+
+
 const addCommentToCard = async (req, res) => {
   try {
     console.log("➡️ [CONTROLLER] addCommentToCard called");

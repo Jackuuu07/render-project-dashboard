@@ -1,5 +1,6 @@
 const Project = require('../models/project.model');
 
+// ----------------- to assined user to project ---------------
 const assignUsersToProject = async (req, res) => {
   try {
     const projectId = parseInt(req.params.projectId); // Project ID from URL
@@ -64,4 +65,81 @@ const assignUsersToProject = async (req, res) => {
   }
 };
 
-module.exports = { assignUsersToProject };
+
+// ------------------- specific assined users project -------------
+
+const getAssignedProjects = async (req, res) => {
+  try {
+    const userId = parseInt(req.params.userId);
+    const role = req.query.role?.toLowerCase(); // "owner", "assigned", or undefined
+
+    console.log("➡️ [CONTROLLER] getAssignedProjects called");
+    console.log("📌 userId:", userId, "| 📌 role:", role);
+
+    if (!userId) {
+      console.warn("⚠️ Missing userId in params");
+      return res.status(400).json({ status: false, message: 'User ID is required in URL' });
+    }
+
+    let filter = {};
+
+    // Build query based on role
+    if (!role || role === 'all') {
+      // All projects (owned or assigned)
+      filter = {
+        $or: [
+          { ownerId: userId },
+          { assignedUsers: { $in: [userId] } }
+        ]
+      };
+    } else if (role === 'owner') {
+      filter = { ownerId: userId };
+    } else if (role === 'assigned') {
+      filter = {
+        assignedUsers: { $in: [userId] },
+        ownerId: { $ne: userId } // exclude projects owned by the same user
+      };
+    } else {
+      console.warn("⚠️ Invalid role query parameter");
+      return res.status(400).json({ 
+        status: false, 
+        message: "Invalid role parameter. Use 'owner', 'assigned', or omit for all." 
+      });
+    }
+
+    const projects = await Project.find(filter);
+
+    console.log(`📊 Found ${projects.length} projects for user ${userId} (${role || 'all'})`);
+
+    if (!projects.length) {
+      return res.status(404).json({ 
+        status: false, 
+        message: `No ${role || 'assigned'} projects found for this user` 
+      });
+    }
+
+    const formattedProjects = projects.map(p => ({
+      id: p.projectId,
+      project_name: p.projectName,
+      project_description: p.description,
+      owner_user_id: p.ownerId,
+      assigned_user_ids: p.assignedUsers,
+      created_at: p.createdAt,
+      updated_at: p.updatedAt
+    }));
+
+    res.status(200).json({
+      status: true,
+      role: role || 'all',
+      count: formattedProjects.length,
+      projects: formattedProjects
+    });
+
+  } catch (error) {
+    console.error("❌ Error fetching assigned projects:", error.message);
+    res.status(500).json({ status: false, message: 'Server Error' });
+  }
+};
+
+
+module.exports = { assignUsersToProject, getAssignedProjects };
