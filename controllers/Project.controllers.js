@@ -930,9 +930,98 @@ const dislikeComment = async (req, res) => {
 };
 
 
-module.exports = {
-  
-  // (and your other exports like getCommentsByCard)
+// --------------------------------------------------------------------------------------
+// 🗑️ Delete a Comment (Only comment owner can delete)
+// --------------------------------------------------------------------------------------
+const deleteCommentToCard = async (req, res) => {
+  try {
+    console.log("\n=============================");
+    console.log("🗑️ [CONTROLLER] deleteCommentToCard START");
+    console.log("🕒 Timestamp:", new Date().toLocaleString());
+    console.log("=============================\n");
+
+    const { projectId, cardId, commentId } = req.params;
+    const userId = req.user.id; // authenticated user's ID
+
+    console.log("📩 [PARAMS RECEIVED]", { projectId, cardId, commentId });
+    console.log("🙋 [USER INFO]", { userId });
+
+    // ✅ Step 1: Validate params
+    if (!projectId || !cardId || !commentId) {
+      console.warn("⚠️ [VALIDATION] Missing required params:", { projectId, cardId, commentId });
+      return res.status(400).json({
+        status: false,
+        message: "projectId, cardId, and commentId are required"
+      });
+    }
+
+    // ✅ Step 2: Find the comment in DB
+    console.log("🔍 [DB QUERY] Searching for comment...");
+    const comment = await Comment.findOne({
+      projectId: Number(projectId),
+      cardId: Number(cardId),
+      commentId: Number(commentId)
+    });
+
+    if (!comment) {
+      console.warn("❌ [NOT FOUND] No comment matches the provided IDs:", { projectId, cardId, commentId });
+      return res.status(404).json({
+        status: false,
+        message: "Comment not found"
+      });
+    }
+
+    console.log("✅ [FOUND] Comment located in DB:", {
+      commentId: comment.commentId,
+      projectId: comment.projectId,
+      cardId: comment.cardId,
+      commentOwner: comment.userId
+    });
+
+    // ✅ Step 3: Ownership check
+    console.log("🧩 [CHECK] Comparing userId with comment owner...");
+    if (Number(comment.userId) !== Number(userId)) {
+      console.warn("🚫 [UNAUTHORIZED] Delete attempt by non-owner:", { requestUser: userId, commentOwner: comment.userId });
+      return res.status(403).json({
+        status: false,
+        message: "You can only delete your own comments"
+      });
+    }
+
+    console.log("🟢 [AUTHORIZED] User owns the comment. Proceeding to delete...");
+
+    // ✅ Step 4: Delete the comment
+    await Comment.deleteOne({ _id: comment._id });
+    console.log("✅ [SUCCESS] Comment deleted from DB:", {
+      commentId: comment.commentId,
+      deletedBy: userId
+    });
+
+    // ✅ Step 5: Respond to client
+    console.log("📤 [RESPONSE] Sending success response to client.\n");
+    console.log("=============================");
+    console.log("🗑️ [CONTROLLER] deleteCommentToCard END");
+    console.log("=============================\n");
+
+    return res.status(200).json({
+      status: true,
+      message: "Comment deleted successfully",
+      deletedComment: {
+        commentId: comment.commentId,
+        cardId: comment.cardId,
+        projectId: comment.projectId,
+        userId: comment.userId
+      }
+    });
+
+  } catch (error) {
+    console.error("🔥 [ERROR] deleteCommentToCard Exception:", error);
+    return res.status(500).json({
+      status: false,
+      message: "Server Error",
+      error: error.message
+    });
+  }
 };
 
 
@@ -940,6 +1029,5 @@ module.exports = {
 
 
 
-
 module.exports = { addProject, updateProject  , getProjects, getProjectStatus, deleteProject, createCard, updateCardStatus, getProjectCards,
-                   addComment, addReply, likeProject, dislikeProject, addCommentToCard, getCommentsByCard,addCommentToCard,likeComment, dislikeComment };
+                   addComment, addReply, likeProject, dislikeProject, addCommentToCard, getCommentsByCard,addCommentToCard,likeComment, dislikeComment, deleteCommentToCard };

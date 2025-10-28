@@ -6,7 +6,7 @@ const {removeAssignedUsers} = require('../controllers/removeassignedProjects')
 const { createCard, updateCardStatus } = require('../controllers/Project.controllers');
 const { addComment, addReply, likeProject, dislikeProject } = require("../controllers/Project.controllers");
 const router = express.Router();
-const { addCommentToCard, getCommentsByCard, likeComment, dislikeComment } = require("../controllers/Project.controllers");
+const { addCommentToCard, getCommentsByCard, likeComment, dislikeComment, deleteCommentToCard } = require("../controllers/Project.controllers");
 
 router.get('/getproject', protect, getProjects );
 
@@ -141,5 +141,31 @@ router.post("/:projectId/card/:cardId/comment/:commentId/dislike", protect, (req
   console.log("👎 [ROUTER] Dislike Comment:", req.params);
   next();
 }, dislikeComment);
+
+
+// ---------------------------------- 🗑️ Delete a comment
+router.delete("/:projectId/:cardId/:commentId", protect, async (req, res, next) => {
+  try {
+    console.log("\n🕒 [INFO]", new Date().toLocaleString());
+    console.log("🗑️ [ROUTE] DELETE /:projectId/:cardId/:commentId called");
+    console.log("📩 Params:", req.params);
+    console.log("🙋 User:", req.user ? req.user.id : "No user (unauthenticated)");
+    
+    // 🔁 Forward to controller
+    await deleteCommentToCard(req, res, next);
+
+    console.log("✅ [ROUTE] deleteCommentToCard execution finished.\n");
+  } catch (error) {
+    console.error("🔥 [ROUTE ERROR] deleteCommentToCard failed:", error.message);
+    return res.status(500).json({
+      status: false,
+      message: "Route Error",
+      error: error.message,
+    });
+  }
+});
+
+
+
 
 module.exports = router;    
